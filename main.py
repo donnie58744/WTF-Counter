@@ -173,7 +173,7 @@ class mainWindow:
         self.wtfBtn.configure(command=self.counter)
 
         self.wtfTitleLabel = tk.Label(top)
-        self.wtfTitleLabel.place(relx=0.5, rely=0.12, height=45, width=600, anchor=CENTER)
+        self.wtfTitleLabel.place(relx=0.5, rely=0.12, height=55, width=600, anchor=CENTER)
         self.wtfTitleLabel.configure(background="#5e5e5e")
         self.wtfTitleLabel.configure(font="-family {Phosphate} -size 48")
         self.wtfTitleLabel.configure(foreground="#000000")
