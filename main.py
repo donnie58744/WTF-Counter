@@ -16,12 +16,12 @@ usersFile = 'data.json'
 import sys
 import os
 import csv
-from datetime import date, time
+import random
+from datetime import date
 from datetime import datetime
-from time import sleep
 from threading import Timer
-from PIL import Image
 from PIL import Image, ImageTk
+from itertools import count
 
 try:
     import tkinter as tk
@@ -61,8 +61,51 @@ def destroy_mainWindow():
 
 userArray = []
 dateArray=[]
+gifCheck = 1
+gif = None
+gifTimer = None
+gifArray = []
 compareToday = ''
 updateTimer = 10.0
+
+# Only took me 5 fucking hours to find this and make it work but this displays GIFs! (Shout out to https://stackoverflow.com/a/43770948/13276597)
+class ImageLabel(tk.Label):
+    def load(self, im):
+        if isinstance(im, str):
+            im = Image.open(im)
+        self.loc = 0
+        self.frames = []
+
+        try:
+            for i in count(1):
+                self.frames.append(ImageTk.PhotoImage(im.copy()))
+                im.seek(i)
+        except EOFError:
+            pass
+
+        try:
+            self.delay = im.info['duration']
+        except:
+            self.delay = 100
+
+        if len(self.frames) == 1:
+            self.config(image=self.frames[0])
+            print(self.frames[0])
+        else:
+            self.next_frame()
+
+    def unload(self):
+        self.config(image="")
+        self.frames = None
+        self.delay = 0
+        self.loc = 0
+
+    def next_frame(self):
+        if self.frames:
+            self.loc += 1
+            self.loc %= len(self.frames)
+            self.config(image=self.frames[self.loc])
+            self.after(self.delay, self.next_frame)
 
 class mainWindow:
     def __init__(self, top=None):
@@ -74,11 +117,14 @@ class mainWindow:
         _ana1color = '#d9d9d9' # X11 color: 'gray85'
         _ana2color = '#ececec' # Closest X11 color: 'gray92'
 
-        top.geometry("651x450+396+150")
-        top.minsize(72, 15)
-        top.maxsize(1440, 847)
+        width= top.winfo_screenwidth() 
+        height= top.winfo_screenheight()
+        #setting tkinter window size
+        top.geometry("%dx%d" % (width, height))
+        top.attributes('-fullscreen', True)
+        top.minsize(750, 650)
         top.resizable(1,  1)
-        top.title("New Toplevel")
+        top.title("What The FUCK! Counter")
         top.configure(background="#5e5e5e")
 
         self.createUserBtn = tk.Button(top,fg='#4fed3e', borderwidth=2, bg='#080808', background='#080808')
@@ -122,19 +168,19 @@ class mainWindow:
         self.closeBtn.configure(text='''X''')
 
         self.wtfBtn = tk.Button(top,borderwidth=0,foreground='black')
-        self.wtfBtn.place(relx=0.43, rely=0.733, height=28, width=77)
+        self.wtfBtn.place(relx=0.8, rely=0.733, height=28, width=77, anchor=CENTER)
         self.wtfBtn.configure(text='''WTF''')
         self.wtfBtn.configure(command=self.counter)
 
         self.wtfTitleLabel = tk.Label(top)
-        self.wtfTitleLabel.place(relx=0.5, rely=0.18, height=45, width=435, anchor=CENTER)
+        self.wtfTitleLabel.place(relx=0.5, rely=0.12, height=45, width=400, anchor=CENTER)
         self.wtfTitleLabel.configure(background="#5e5e5e")
         self.wtfTitleLabel.configure(font="-family {Phosphate} -size 48")
         self.wtfTitleLabel.configure(foreground="#000000")
         self.wtfTitleLabel.configure(text='''What The Fuck!''')
 
         self.wtfCounterLabel = tk.Label(top)
-        self.wtfCounterLabel.place(relx=0.5, rely=0.4, height=33, width=247, anchor=CENTER)
+        self.wtfCounterLabel.place(relx=0.5, rely=0.25, height=33, width=105, anchor=CENTER)
         self.wtfCounterLabel.configure(activebackground="#f9f9f9")
         self.wtfCounterLabel.configure(activeforeground="black")
         self.wtfCounterLabel.configure(background="#5e5e5e")
@@ -146,11 +192,13 @@ class mainWindow:
 
         # Load
         global compareToday
+        global gif
+        gif = ImageLabel(root)
         compareToday = (date.today()).strftime("%m/%d/%y")
         
+        
         self.dailyReset()
-            
-    
+
     # This checks to see if the csv file is empty
     def initCsv(self):
         with open('counterLog.csv', 'r',) as file:
@@ -163,7 +211,6 @@ class mainWindow:
             else:
                 print("empty")
                 return False
-                
 
     def writeCsv(self):
         today = (date.today()).strftime("%m/%d/%y")
@@ -178,81 +225,6 @@ class mainWindow:
                 counterLogWritter.writerow([today, currentTime])
             else:
                 counterLogWritter.writerow([today, currentTime])
-
-    def counterUser(self, username, password):
-        with open(usersFile,'r+') as file:
-            data = json.load(file)
-
-            for row in data['users']: 
-                if (username == row['username'] and password == row['password']):
-                    # add to wtf counter and to users profile
-                    row['wtf']+=1
-
-            # Sets file's current position at offset.
-            file.seek(0)
-            # convert back to json.
-            json.dump(data, file, indent = 4)
-            file.truncate()
-
-    def getCounter(self):
-        with open(usersFile,'r+') as file:
-            # First we load existing data into a dict.
-            file_data = json.load(file)
-
-            # Get wtf counter
-            for row in file_data['wtfCounter']:
-                return row['counter']
-
-    def setCounter(self):
-        self.wtfCounterLabel.configure(text=self.getCounter())
-
-    def achivements(self):
-        # load json file
-        with open(usersFile,'r+') as file:
-            # First we load existing data into a dict.
-            file_data = json.load(file)
-
-            # Get wtf counter
-            for row in file_data['acheivements']:
-                if (self.getCounter() == row['value']):
-                    print(row['name'])
-
-    def dailyReset(self):
-        global compareToday
-        global updateTimer
-
-        # Start thread
-        thread = Timer(updateTimer,self.dailyReset)
-
-        if (thread.is_alive()):
-            print('Restart Timer')
-            thread.cancel()
-        thread.daemon = True
-        thread.start()
-        today = (date.today()).strftime("%m/%d/%y")
-
-        # If the day changes then reset wtf counter
-        if (compareToday != today):
-            # Set the date compare var to today
-            compareToday = today
-            with open(usersFile,'r+') as file:
-                # First we load existing data into a dict.
-                file_data = json.load(file)
-                
-                # Reset global wtf counter
-                for row in file_data['wtfCounter']:
-                    row["counter"] = 0
-                # Sets file's current position at offset.
-                file.seek(0)
-                # convert back to json.
-                json.dump(file_data, file, indent = 4)
-                file.truncate()
-
-                # Refresh counter
-                self.setCounter()
-
-            print('Good Morning! WTF Counter has been reset')
-
 
     def logCounter(self):
         global dateArray
@@ -292,67 +264,109 @@ class mainWindow:
             # convert back to json.
             json.dump(file_data, file, indent = 4)
             file.truncate()
-    
-    def counter(self):
-        username = self.usernameEntry.get()
-        password = self.passwordEntry.get()
-        
-        with open(usersFile,'r+') as file:
-            # First we load existing data into a dict.
-            file_data = json.load(file)
 
-            # Add to global wtf counter
-            for row in file_data['wtfCounter']:
-                row["counter"] += 1
+    def counterUser(self, username, password):
+        with open(usersFile,'r+') as file:
+            data = json.load(file)
+
+            for row in data['users']: 
+                if (username == row['username'] and password == row['password']):
+                    # add to wtf counter and to users profile
+                    row['wtf']+=1
 
             # Sets file's current position at offset.
             file.seek(0)
             # convert back to json.
-            json.dump(file_data, file, indent = 4)
+            json.dump(data, file, indent = 4)
             file.truncate()
 
-        # Add wtf to user
-        self.counterUser(username, password)
+    def achivements(self):
+        # load json file
+        with open(usersFile,'r+') as file:
+            # First we load existing data into a dict.
+            file_data = json.load(file)
 
-        # Log date and time
-        self.logCounter()
+            # Get wtf counter
+            for row in file_data['acheivements']:
+                if (self.getCounter() == row['value']):
+                    print(row['name'])
 
-        self.achivements()
+    def getCounter(self):
+        with open(usersFile,'r+') as file:
+            # First we load existing data into a dict.
+            file_data = json.load(file)
 
-        # Refresh the counter
-        self.setCounter()
-        self.writeCsv()
+            # Get wtf counter
+            for row in file_data['wtfCounter']:
+                return row['counter']
 
-    # Menus and Shit
+    def dailyReset(self):
+        global compareToday
+        global updateTimer
 
-    def showUserMenu(self):
-        self.wtfCounterLabel.place_forget()
-        self.wtfTitleLabel.place_forget()
-        # Show username and password fields
-        self.usernameEntry.place(relx=0.369, rely=0.222, height=35
-                , relwidth=0.264)
-        self.usernameLabel.place(relx=0.43, rely=0.156, height=22, width=89)
-        self.passwordEntry.place(relx=0.369, rely=0.444, height=35
-                , relwidth=0.264)
-        self.passwordLabel.place(relx=0.415, rely=0.378, height=22, width=109)
-        self.closeBtn.place(relx=0.661, rely=0.089, height=28, width=47)
+        # Start thread
+        thread = Timer(updateTimer,self.dailyReset)
 
-    def closeUserMenu(self):
-        # Show Wtf label and counter
-        self.wtfTitleLabel.place(relx=0.5, rely=0.22, height=45, width=435, anchor=CENTER)
-        self.wtfCounterLabel.place(relx=0.5, rely=0.4, height=33, width=247, anchor=CENTER)
-        
-        # Rest entries
-        self.usernameEntry.delete(0, END)
-        self.passwordEntry.delete(0, END)
+        if (thread.is_alive()):
+            print('Restart Timer')
+            thread.cancel()
+        thread.daemon = True
+        thread.start()
+        today = (date.today()).strftime("%m/%d/%y")
 
-        # Hide user create stuff
-        self.usernameEntry.place_forget()
-        self.usernameLabel.place_forget()
-        self.passwordEntry.place_forget()
-        self.passwordLabel.place_forget()
-        self.closeBtn.place_forget()
+        # If the day changes then reset wtf counter
+        if (compareToday != today):
+            # Set the date compare var to today
+            compareToday = today
+            with open(usersFile,'r+') as file:
+                # First we load existing data into a dict.
+                file_data = json.load(file)
                 
+                # Reset global wtf counter
+                for row in file_data['wtfCounter']:
+                    row["counter"] = 0
+                # Sets file's current position at offset.
+                file.seek(0)
+                # convert back to json.
+                json.dump(file_data, file, indent = 4)
+                file.truncate()
+
+                # Refresh counter
+                self.setCounter()
+
+            print('Good Morning! WTF Counter has been reset')
+
+
+    def clearGif(self):
+        global gif
+        global gifCheck
+        gif.unload()
+        gif.place_forget()
+        gifCheck = True
+        
+          
+    def randomGif(self):  
+        global gifArray
+        global gifCheck
+        global gif
+
+        for filename in os.listdir('gifs/'):
+            if not filename.startswith('.') and os.path.isfile(os.path.join('gifs/', filename)):
+                gifArray.append(filename)
+
+        randomGifFile = random.choice(gifArray)
+
+        print(randomGifFile)
+
+        # gif check is so you dont have multiple gifs at once
+        if (gifCheck):
+            gif.place(relx=0.5, rely=0.7, anchor=CENTER)
+            gif.load('gifs/'+randomGifFile)
+
+            t = Timer(10, self.clearGif)
+            t.daemon = True
+            t.start()
+        gifCheck = False
 
     def createUser(self, filename=usersFile):
         global userArray
@@ -392,6 +406,72 @@ class mainWindow:
                                 file.truncate()
                                 
                             userArray = []
+
+    def setCounter(self):
+        self.wtfCounterLabel.configure(text=self.getCounter())
+    
+    def counter(self):
+        username = self.usernameEntry.get()
+        password = self.passwordEntry.get()
+        
+        with open(usersFile,'r+') as file:
+            # First we load existing data into a dict.
+            file_data = json.load(file)
+
+            # Add to global wtf counter
+            for row in file_data['wtfCounter']:
+                row["counter"] += 1
+
+            # Sets file's current position at offset.
+            file.seek(0)
+            # convert back to json.
+            json.dump(file_data, file, indent = 4)
+            file.truncate()
+
+        # Add wtf to user
+        self.counterUser(username, password)
+
+        self.achivements()
+
+        # Refresh the counter
+        self.setCounter()
+        
+        # Log date and time
+        self.logCounter()
+        self.writeCsv()
+
+        # Show Gif
+        self.randomGif()
+
+    # Menus and Shit
+
+    def showUserMenu(self):
+        self.wtfCounterLabel.place_forget()
+        self.wtfTitleLabel.place_forget()
+        # Show username and password fields
+        self.usernameEntry.place(relx=0.369, rely=0.222, height=35
+                , relwidth=0.264)
+        self.usernameLabel.place(relx=0.43, rely=0.156, height=22, width=89)
+        self.passwordEntry.place(relx=0.369, rely=0.444, height=35
+                , relwidth=0.264)
+        self.passwordLabel.place(relx=0.415, rely=0.378, height=22, width=109)
+        self.closeBtn.place(relx=0.661, rely=0.089, height=28, width=47)
+
+    def closeUserMenu(self):
+        # Show Wtf label and counter
+        self.wtfTitleLabel.place(relx=0.5, rely=0.22, height=45, width=435, anchor=CENTER)
+        self.wtfCounterLabel.place(relx=0.5, rely=0.4, height=33, width=247, anchor=CENTER)
+        
+        # Rest entries
+        self.usernameEntry.delete(0, END)
+        self.passwordEntry.delete(0, END)
+
+        # Hide user create stuff
+        self.usernameEntry.place_forget()
+        self.usernameLabel.place_forget()
+        self.passwordEntry.place_forget()
+        self.passwordLabel.place_forget()
+        self.closeBtn.place_forget()
 
 if __name__ == '__main__':
     try:
