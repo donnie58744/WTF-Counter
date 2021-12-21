@@ -1,0 +1,36 @@
+{
+    "users": [
+        {
+            "username": "this is here because im too lazy to check if json file is empty so LEAVE THIS LINE"
+        }
+    ],
+    "wtfCounter": [
+        {
+            "counter": 0
+        }
+    ],
+    "acheivements": [
+        {
+            "name": "First What The Fuck Of The Day",
+            "value": 1
+        },
+        {
+            "name": "10 What The Fucks In A Day!",
+            "value": 10
+        },
+        {
+            "name": "25 What The Fucks In A Day!",
+            "value": 25
+        },
+        {
+            "name": "50 What The Fucks In A Day!",
+            "value": 50
+        }
+    ],
+    "dates": [
+        {
+            "date": "00/00/00",
+            "time": ""
+        }
+    ]
+}
