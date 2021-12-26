@@ -55,7 +55,7 @@ userArray = []
 dateArray=[]
 gifCheck = 1
 gif = None
-gifTimer = 5
+gifTimer = 7
 gifArray = []
 compareToday = ''
 updateTimer = 10.0
@@ -113,7 +113,7 @@ class mainWindow:
         height= top.winfo_screenheight()
         #setting tkinter window size
         top.geometry("%dx%d" % (width, height))
-        #top.attributes('-fullscreen', True)
+        top.attributes('-fullscreen', True)
         top.minsize(750, 650)
         top.resizable(1,  1)
         top.title("What The FUCK! Counter")
@@ -350,11 +350,18 @@ class mainWindow:
         global gifCheck
         global gif
 
-        print(gifArray)
         
+        if (not gifArray):
+            self.setupGifs()
+
         # gif check is so you dont have multiple gifs at once
         if (gifCheck):
             randomGifFile = random.choice(gifArray)
+
+            # Remove picked gif from gif array to prevent seeing the same gif more than once
+            gifArray.remove(randomGifFile)
+            print(gifArray)
+            print(randomGifFile)
 
             gif.place(relx=0.5, rely=0.7, anchor=CENTER)
             gif.load('gifs/'+randomGifFile)
